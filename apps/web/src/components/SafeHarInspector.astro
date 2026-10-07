@@ -1,0 +1,341 @@
+---
+// SafeHarInspector.astro
+---
+
+<div class="w-full max-w-5xl mx-auto space-y-6">
+  <!-- Ingestion Zone -->
+  <div
+    id="drop-zone"
+    class="relative group border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-2xl p-8 md:p-12 text-center transition-all bg-slate-900/60 hover:bg-slate-900/90 backdrop-blur cursor-pointer"
+  >
+    <input
+      type="file"
+      id="har-file-input"
+      accept=".har,application/json"
+      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+    />
+    <div class="space-y-4">
+      <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-lg md:text-xl font-semibold text-white">Tarik & Lepas berkas .HAR Anda ke sini</h3>
+        <p class="text-sm text-slate-400 mt-1">atau klik untuk memilih berkas dari komputer (Hingga 500MB)</p>
+      </div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-xs font-mono text-emerald-400 border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        100% Client-Side In-Browser &bull; Zero Server Transmission &bull; Heap &lt; 60MB
+      </div>
+    </div>
+  </div>
+
+  <!-- Redaction Toggles / Control Panel -->
+  <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 md:p-6 backdrop-blur">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800">
+      <div>
+        <h4 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Konfigurasi Aturan Redaksi 9-Tahap</h4>
+        <p class="text-xs text-slate-400">Pilih jenis kredensial dan data sensitif yang ingin disamarkan secara otomatis.</p>
+      </div>
+      <div id="stats-badge" class="hidden items-center gap-3 text-xs">
+        <span class="px-2.5 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">
+          Entri: <strong id="stat-entries" class="text-emerald-400">0</strong>
+        </span>
+        <span class="px-2.5 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700">
+          Disamarkan: <strong id="stat-redacted" class="text-rose-400">0</strong>
+        </span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-auth" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">Auth Bearer / Basic</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-cookies" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">Session Cookies</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-stripe" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">Stripe Keys</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-aws" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">AWS Keys</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-emails" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">Email (PII)</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="opt-cards" checked class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-800" />
+        <span class="text-slate-300">Kartu Kredit (PAN)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Progress Bar (Hidden by default) -->
+  <div id="progress-container" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+    <div class="flex items-center justify-between text-xs text-slate-300">
+      <span id="progress-status" class="flex items-center gap-2 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        Memproses chunk streaming...
+      </span>
+      <span id="progress-count" class="font-mono text-emerald-400">0 entri diproses</span>
+    </div>
+    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+      <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-200" style="width: 5%"></div>
+    </div>
+  </div>
+
+  <!-- Action Bar & Export Button (Revealed after processing) -->
+  <div id="export-bar" class="hidden flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-emerald-950/40 border border-emerald-500/30 rounded-xl">
+    <div class="flex items-center gap-2 text-sm text-emerald-200">
+      <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>Sanitasi selesai! Seluruh kredensial sensitif telah disamarkan.</span>
+    </div>
+    <button
+      id="download-btn"
+      class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+      Unduh Berkas HAR Bersih (.har)
+    </button>
+  </div>
+
+  <!-- Interactive HTTP Table Inspector -->
+  <div id="table-container" class="hidden bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+    <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <h4 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+        <span>Tabel Inspeksi Transaksi HTTP</span>
+        <span id="badge-total-entries" class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-400">0</span>
+      </h4>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Cari URL, status, atau metode..."
+        class="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 w-full sm:w-64"
+      />
+    </div>
+
+    <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+      <table class="w-full text-left text-xs font-mono">
+        <thead class="bg-slate-950/80 text-slate-400 uppercase text-[11px] tracking-wider sticky top-0 backdrop-blur z-10 border-b border-slate-800">
+          <tr>
+            <th class="py-2.5 px-3 w-12 text-center">#</th>
+            <th class="py-2.5 px-3 w-20">Metode</th>
+            <th class="py-2.5 px-3 w-16">Status</th>
+            <th class="py-2.5 px-3">URL Transaksi</th>
+            <th class="py-2.5 px-3 w-28 text-center">Status Redaksi</th>
+          </tr>
+        </thead>
+        <tbody id="table-body" class="divide-y divide-slate-800/60 text-slate-300">
+          <!-- Dynamically populated rows -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { HarStreamParser } from "@safehar/core";
+  import { generateSanitizedHarChunks } from "@safehar/core";
+  import type { HarEntrySummary } from "@safehar/contracts";
+
+  let allSummaries: HarEntrySummary[] = [];
+  let collectedSanitizedEntries: any[] = [];
+  let parsedMetadata: any = {};
+  let originalFileName = "sanitized-export.har";
+
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("har-file-input") as HTMLInputElement;
+  const progressContainer = document.getElementById("progress-container");
+  const progressCount = document.getElementById("progress-count");
+  const progressBarFill = document.getElementById("progress-bar-fill");
+  const exportBar = document.getElementById("export-bar");
+  const downloadBtn = document.getElementById("download-btn");
+  const tableContainer = document.getElementById("table-container");
+  const tableBody = document.getElementById("table-body");
+  const statsBadge = document.getElementById("stats-badge");
+  const statEntries = document.getElementById("stat-entries");
+  const statRedacted = document.getElementById("stat-redacted");
+  const badgeTotalEntries = document.getElementById("badge-total-entries");
+  const searchInput = document.getElementById("search-input") as HTMLInputElement;
+
+  function getOptions() {
+    return {
+      maskAuthHeaders: (document.getElementById("opt-auth") as HTMLInputElement)?.checked ?? true,
+      maskCookies: (document.getElementById("opt-cookies") as HTMLInputElement)?.checked ?? true,
+      maskStripeKeys: (document.getElementById("opt-stripe") as HTMLInputElement)?.checked ?? true,
+      maskAwsKeys: (document.getElementById("opt-aws") as HTMLInputElement)?.checked ?? true,
+      maskEmails: (document.getElementById("opt-emails") as HTMLInputElement)?.checked ?? true,
+      maskCreditCards: (document.getElementById("opt-cards") as HTMLInputElement)?.checked ?? true,
+    };
+  }
+
+  function renderRows(summaries: HarEntrySummary[]) {
+    if (!tableBody) return;
+    const fragment = document.createDocumentFragment();
+
+    summaries.forEach((entry, idx) => {
+      const row = document.createElement("tr");
+      row.className = "hover:bg-slate-800/40 transition-colors";
+
+      const methodColor =
+        entry.method === "GET"
+          ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
+          : entry.method === "POST"
+          ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+          : entry.method === "DELETE"
+          ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+          : "text-amber-400 bg-amber-500/10 border-amber-500/20";
+
+      const statusColor =
+        entry.status >= 200 && entry.status < 300
+          ? "text-emerald-400"
+          : entry.status >= 400
+          ? "text-rose-400 font-bold"
+          : "text-slate-400";
+
+      row.innerHTML = `
+        <td class="py-2 px-3 text-center text-slate-500">${allSummaries.length - summaries.length + idx + 1}</td>
+        <td class="py-2 px-3">
+          <span class="px-1.5 py-0.5 rounded border text-[10px] font-bold ${methodColor}">${entry.method}</span>
+        </td>
+        <td class="py-2 px-3 ${statusColor}">${entry.status}</td>
+        <td class="py-2 px-3 max-w-md truncate text-slate-200" title="${entry.url}">${entry.url}</td>
+        <td class="py-2 px-3 text-center">
+          ${
+            entry.redactedFieldsCount > 0
+              ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold font-sans">
+                  <span>[REDACTED]</span>
+                  <span class="text-xs">(${entry.redactedFieldsCount})</span>
+                </span>`
+              : `<span class="text-slate-600 text-[10px]">Bersih</span>`
+          }
+        </td>
+      `;
+      fragment.appendChild(row);
+    });
+
+    tableBody.appendChild(fragment);
+  }
+
+  async function processFile(file: File) {
+    originalFileName = file.name.replace(/\.har$/i, "") + "-sanitized.har";
+    allSummaries = [];
+    collectedSanitizedEntries = [];
+    if (tableBody) tableBody.innerHTML = "";
+
+    progressContainer?.classList.remove("hidden");
+    exportBar?.classList.add("hidden");
+    tableContainer?.classList.remove("hidden");
+    statsBadge?.classList.remove("hidden");
+
+    const parser = new HarStreamParser({
+      redactionOptions: getOptions(),
+      batchSize: 50,
+      onBatch: (batch) => {
+        allSummaries.push(...batch);
+        renderRows(batch);
+        if (progressCount) progressCount.innerText = `${allSummaries.length} entri diproses...`;
+        if (badgeTotalEntries) badgeTotalEntries.innerText = String(allSummaries.length);
+        if (statEntries) statEntries.innerText = String(allSummaries.length);
+      },
+      onEntrySanitized: (entry) => {
+        collectedSanitizedEntries.push(entry);
+      },
+    });
+
+    const stream = file.stream();
+    const reader = stream.getReader();
+    let bytesRead = 0;
+    const totalBytes = file.size || 1;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          bytesRead += value.byteLength;
+          parser.writeChunk(value);
+          const percent = Math.min(95, Math.round((bytesRead / totalBytes) * 100));
+          if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+        }
+      }
+
+      const res = parser.end();
+      parsedMetadata = parser.getMetadata();
+      if (progressBarFill) progressBarFill.style.width = "100%";
+
+      if (statEntries) statEntries.innerText = String(res.totalEntries);
+      if (statRedacted) statRedacted.innerText = String(res.totalRedactedFields);
+      if (badgeTotalEntries) badgeTotalEntries.innerText = String(res.totalEntries);
+
+      setTimeout(() => {
+        progressContainer?.classList.add("hidden");
+        exportBar?.classList.remove("hidden");
+      }, 300);
+    } catch (err: any) {
+      alert("Gagal memproses berkas HAR: " + (err?.message || err));
+      progressContainer?.classList.add("hidden");
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  // Drag and drop handlers
+  dropZone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("border-emerald-400", "bg-slate-900");
+  });
+
+  dropZone?.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-emerald-400", "bg-slate-900");
+  });
+
+  dropZone?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("border-emerald-400", "bg-slate-900");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) processFile(file);
+  });
+
+  fileInput?.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    if (file) processFile(file);
+  });
+
+  // Instant In-browser Clean HAR Download
+  downloadBtn?.addEventListener("click", () => {
+    const chunks: string[] = [];
+    for (const chunk of generateSanitizedHarChunks(parsedMetadata, collectedSanitizedEntries)) {
+      chunks.push(chunk);
+    }
+    const blob = new Blob(chunks, { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = originalFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Filter search
+  searchInput?.addEventListener("input", (e) => {
+    const query = (e.target as HTMLInputElement).value.toLowerCase();
+    const rows = tableBody?.getElementsByTagName("tr") || [];
+    for (let i = 0; i < rows.length; i++) {
+      const text = rows[i].textContent?.toLowerCase() || "";
+      rows[i].style.display = text.includes(query) ? "" : "none";
+    }
+  });
+</script>

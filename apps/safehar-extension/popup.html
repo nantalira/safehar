@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHAR Sanitizer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #020617;
+      color: #f8fafc;
+      padding: 16px;
+      font-size: 13px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 15px;
+      color: #10b981;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      font-size: 10px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .drop-zone {
+      position: relative;
+      border: 2px dashed #334155;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      background: #0f172a;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .drop-zone:hover {
+      border-color: #10b981;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-item input {
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #10b981;
+      color: #020617;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #34d399;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .status {
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 6px;
+    }
+    .stats {
+      background: #1e293b;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-around;
+      margin-top: 8px;
+    }
+    .stats strong {
+      color: #10b981;
+    }
+    .banner {
+      margin-top: 14px;
+      padding: 8px;
+      background: linear-gradient(to right, #1e1b4b, #0f172a);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 6px;
+      font-size: 10px;
+      text-align: center;
+      color: #c7d2fe;
+    }
+    .banner a {
+      color: #818cf8;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span>🛡️ SafeHAR</span>
+      <span class="badge">MV3 Zero-Permission</span>
+    </div>
+  </header>
+
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".har,application/json">
+    <p style="font-weight: 600; color: #f1f5f9;">Pilih atau Lepas berkas .HAR</p>
+    <p style="font-size: 11px; color: #64748b; margin-top: 2px;">100% In-Browser &bull; Heap &lt; 60MB</p>
+  </div>
+
+  <div class="options-grid">
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-auth" checked>
+      <span>Bearer / Basic</span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-cookies" checked>
+      <span>Cookies Sesi</span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-stripe" checked>
+      <span>Stripe Keys</span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-aws" checked>
+      <span>AWS Keys</span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-emails" checked>
+      <span>Surel (PII)</span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="toggle-cards" checked>
+      <span>Kartu Kredit</span>
+    </label>
+  </div>
+
+  <div id="status" class="status hidden"></div>
+
+  <div id="stats" class="stats hidden">
+    <span>Entri: <strong id="entries-count">0</strong></span>
+    <span>Disamarkan: <strong id="redacted-count" style="color: #f43f5e;">0</strong></span>
+  </div>
+
+  <button id="download-btn" class="btn hidden">Unduh Berkas HAR Bersih</button>
+
+  <div class="banner">
+    Proteksi webhook Stripe dari 504 timeout? <br>
+    <a href="https://example.com" target="_blank">Coba HookPulse Sentinel &rarr;</a>
+  </div>
+
+  <script src="./popup.js"></script>
+</body>
+</html>

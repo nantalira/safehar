@@ -1,0 +1,80 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SafeHarInspector from "../components/SafeHarInspector.astro";
+import { SEO_PAGES_DATA } from "@safehar/contracts";
+
+export async function getStaticPaths() {
+  return SEO_PAGES_DATA.safehar_vendor_keywords.map((item) => ({
+    params: { slug: item.slug },
+    props: {
+      slug: item.slug,
+      keyword: item.keyword,
+      vendor: item.vendor,
+    },
+  }));
+}
+
+interface Props {
+  slug: string;
+  keyword: string;
+  vendor: string;
+}
+
+const props = Astro.props as Props;
+---
+
+<Layout
+  title={`${props.keyword} | Panduan Solusi DevTools`}
+  description={`Panduan lengkap cara membersihkan dan menyamarkan berkas HAR untuk ${props.vendor}. Sanitasi kredensial 100% di browser tanpa unggah data ke server.`}
+>
+  <div class="max-w-5xl mx-auto px-4 py-12 md:py-16 space-y-12">
+    <!-- Breadcrumb -->
+    <nav class="text-xs text-slate-500 font-mono flex items-center gap-2">
+      <a href="/" class="hover:text-slate-300">Beranda</a>
+      <span>/</span>
+      <span class="text-slate-400 capitalize">Vendor</span>
+      <span>/</span>
+      <span class="text-emerald-400 truncate max-w-xs">{props.slug}</span>
+    </nav>
+
+    <article class="space-y-8">
+      <header class="space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
+          <span>🛡️ Panduan Keamanan Vendor: {props.vendor}</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          {props.keyword}
+        </h1>
+        <p class="text-sm md:text-base text-slate-300 leading-relaxed">
+          Saat membuat tiket bantuan ke <strong>{props.vendor}</strong>, berkas log HTTP Archive (.har) sering diminta oleh tim bantuan teknis. Namun, berkas HAR mentah memuat kunci API, kuki sesi, dan token otorisasi Bearer JWT yang sangat sensitif.
+        </p>
+      </header>
+
+      <section class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>Sanitasi Berkas HAR Anda Sekarang (Langsung di Browser)</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Zero-Server</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Gunakan utilitas di bawah untuk menyamarkan semua token sebelum melampirkan berkas ke tiket bantuan {props.vendor}.
+          </p>
+        </div>
+        <SafeHarInspector />
+      </section>
+
+      <section class="prose prose-invert max-w-none text-xs md:text-sm text-slate-300 space-y-4 leading-relaxed">
+        <h3 class="text-base font-bold text-white">Mengapa Anda Wajib Menyamarkan Berkas HAR Sebelum Dikirim?</h3>
+        <p>
+          Berkas HAR merekam seluruh payload permintaan dan respons jaringan secara eksplisit. Tanpa pembersihan, kredensial berikut dapat terekspos ke pihak luar:
+        </p>
+        <ul class="list-disc pl-5 space-y-1.5 text-slate-400">
+          <li>Header <code>Authorization: Bearer</code> dan <code>Basic</code></li>
+          <li>Kuki sesi web seperti <code>connect.sid</code>, <code>PHPSESSID</code>, atau token sesi SSO {props.vendor}</li>
+          <li>API Key pihak ketiga (Stripe <code>sk_live_</code>, AWS <code>AKIA</code>, GitHub tokens)</li>
+          <li>Nomor kartu pembayaran pelanggan dan alamat email pengguna (PII)</li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</Layout>

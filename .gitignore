@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build artifacts
+dist/
+.astro/
+build/
+
+# Cloudflare Wrangler & Edge
+.wrangler/
+.mf/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs & Diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & System files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Temporary files & Local test fixtures
+*.tmp
+*.bak
+repopack-output.txt
+*.har
+test-sample.har
+
+# Internal Business Requirements & Strategy (Keep local only)
+requirements/
+openspec/
+
+# Internal AI Agent configuration (Keep local only)
+.agents/
+AGENT.md

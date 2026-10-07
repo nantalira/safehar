@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "declaration": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ESNext", "DOM", "WebWorker"],
+    "baseUrl": ".",
+    "paths": {
+      "@safehar/contracts": ["../contracts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

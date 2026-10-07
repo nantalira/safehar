@@ -1,0 +1,22 @@
+{
+  "name": "safehar",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --workspaces build",
+    "test": "bun test",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@streamparser/json": "^0.0.26"
+  }
+}

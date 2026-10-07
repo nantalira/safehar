@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "SafeHAR - 100% In-Browser HAR Sanitizer",
+  "version": "0.1.0",
+  "description": "Sanitasi token Bearer, kuki sesi, API keys, dan data sensitif dari berkas HTTP Archive (.har) langsung di peramban tanpa unggah ke server.",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SafeHAR Sanitizer"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  }
+}

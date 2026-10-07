@@ -1,0 +1,13 @@
+{
+  "name": "@safehar/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/popup.ts --outfile ./popup.js --target browser"
+  },
+  "dependencies": {
+    "@safehar/contracts": "workspace:*",
+    "@safehar/core": "workspace:*"
+  }
+}
